@@ -32,10 +32,10 @@ contract Voting is Ownable {
         VotingToken token;
         uint256 transferAmount;
     }
-
     mapping(uint256 => Candidate) public candidates;
     mapping(address => bool) public voters;
     mapping(address => bool) public registeredVoters;
+    mapping(address => address) public tokenOfAddress;
     uint256 public candidatesCount;
 
     event TokenCreated(
@@ -65,7 +65,7 @@ contract Voting is Ownable {
         string memory symbol,
         uint256 initialSupply,
         uint8 decimal
-    ) external returns (VotingToken) {
+    ) external returns (address) {
         VotingToken newToken = new VotingToken(
             name,
             symbol,
@@ -74,7 +74,14 @@ contract Voting is Ownable {
             msg.sender
         );
         emit TokenCreated(address(newToken), name, symbol, initialSupply);
-        return newToken;
+        tokenOfAddress[msg.sender] = address(newToken);
+        return address(newToken);
+    }
+
+    function getTokenAddress() public view returns (address) {
+        require(tokenOfAddress[msg.sender] != address(0), "Token not created.");
+        return tokenOfAddress[msg.sender];
+        
     }
 
     function addCandidate(
@@ -92,7 +99,6 @@ contract Voting is Ownable {
             _token,
             _transferAmount
         );
-
         emit CandidateAdded(
             candidatesCount,
             _name,
@@ -153,13 +159,11 @@ contract Voting is Ownable {
         uint256 amountToTransfer = candidate.transferAmount *
             10**candidate.token.decimals();
 
- 
-
         require(
             candidate.token.balanceOf(address(this)) >= amountToTransfer,
             "Insufficient token balance in this contract."
         );
- 
+
         candidate.token.transfer(msg.sender, amountToTransfer);
 
         voters[msg.sender] = true;
